@@ -210,8 +210,16 @@ with tabs[3]:
                  width="stretch")
     st.subheader("Contribution by position")
     pp = nii.positions.set_index(["id", "name", "ccy"])
-    st.dataframe(pp.style.format("{:,.1f}").background_gradient(cmap="RdYlGn", subset=P.SCENARIOS, axis=None),
-                 width="stretch")
+    scale = max(float(pp[P.SCENARIOS].abs().to_numpy().max()), 1e-9)
+
+    def shade(v: float) -> str:  # green = NII gain, red = NII loss (no matplotlib dependency)
+        if not np.isfinite(v) or v == 0:
+            return ""
+        a = min(abs(v) / scale, 1.0) * 0.55
+        rgb = "12,163,12" if v > 0 else "208,59,59"
+        return f"background-color: rgba({rgb},{a:.2f})"
+
+    st.dataframe(pp.style.format("{:,.1f}").map(shade, subset=P.SCENARIOS), width="stretch")
     st.caption("Maturing and repricing positions are replaced by identical positions at the shocked market "
                "rate plus their current commercial margin. NMD rates move by beta × overnight shock and are "
                "floored at 0%. Prepayments and early redemptions follow the scenario multipliers.")
